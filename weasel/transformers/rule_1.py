@@ -7,23 +7,68 @@
         print(10 + 100)
 """
 import ast
-import copy
 
 # TODO: add testcases
 
 
-class Rule_1(ast.NodeTransformer):
-    def __init__(self, root=None, globals=None):
+class NodeCounter:
+    def __init__(self, node, value):
+        self.node = node
+        self.value = value
+        self.count = 1
+
+
+class Rule_1_visitor(ast.NodeVisitor):
+    def __init__(self):
         super().__init__()
-        self._root = root
-        self._global_constants = globals or {}
-        self._local_constants = {}
+        self._statistic = {}
+        self.inside_function = False
 
     def visit_FunctionDef(self, node):
+        self.inside_function = True
+        for child in node.body:
+            self.visit(child)
+        self.inside_function = False
+
+    def visit_AsyncFunctionDef(self, node):
+        self.inside_function = True
+        for child in node.body:
+            self.visit(child)
+        self.inside_function = False
+
+    def visit_ClassDef(self, node):
+        self.inside_function = True
+        for child in node.body:
+            self.visit(child)
+        self.inside_function = False
+
+    def visit_Assign(self, node):
+        if self.inside_function:
+            return
+        # TODO: we want to optimize such cases also
+        if len(node.targets) > 1 or not isinstance(node.targets[0], ast.Name):
+            return
+        target_name = node.targets[0].id
+        if isinstance(node.value, ast.Constant):
+            counter = self._statistic.get(
+                target_name, NodeCounter(node, node.value)
+            )
+            counter.count += 1
+
+
+class Rule_1(ast.NodeTransformer):
+    def __init__(self, statistic, root=None):
+        super().__init__()
+        self._root = root
+        self._statistic = statistic
+
+    def visit_FunctionDef(self, node):
+        print(node)
         if node != self._root:
-            new_globals = copy.deepcopy(self._global_constants)
-            new_globals.update(self._local_constants)
-            return Rule_1(root=node, globals=new_globals).visit(node)
+            locals = Rule_1_visitor()
+            for node in node.body:
+                locals.visit(node)
+            return Rule_1(self._statistic + [locals], root=node).visit(node)
         new_body = []
         for child in node.body:
             new_child = self.visit(child)
@@ -42,16 +87,19 @@ class Rule_1(ast.NodeTransformer):
         )
 
     def visit_Name(self, node):
+        print(node)
         # Note: order is important
-        for lookup_dict in (self._local_constants, self._global_constants):
-            if node.id in lookup_dict:
-                const = lookup_dict[node.id]
+        for lookup in self._statistic[::-1]:
+            if node.id in lookup._statistic:
+                v = lookup._statistic[node.id]
+                if v.count > 1:
+                    return node
                 return ast.copy_location(
                     ast.Constant(
-                        value=const.value,
-                        kind=const.kind,
-                        s=const.s,
-                        n=const.n,
+                        value=v.value.value,
+                        kind=v.value.kind,
+                        s=v.value.s,
+                        n=v.value.n,
                     ),
                     node,
                 )
@@ -63,13 +111,12 @@ class Rule_1(ast.NodeTransformer):
             return node
         target_name = node.targets[0].id
         if isinstance(node.value, ast.Constant):
-            self._local_constants[target_name] = node.value
-            return None
-        elif target_name in self._local_constants:
-            self._local_constants.pop(target_name)
-            self._global_constants.pop(target_name, None)
-        elif target_name in self._global_constants:
-            self._global_constants.pop(target_name, None)
+            for lookup in self._statistic[::-1]:
+                if target_name in lookup._statistic:
+                    v = lookup._statistic[target_name]
+                    if v.count > 1:
+                        return node
+                    return None
         # Visiting individual expression nodes
         # a = b + c
         #     ^ ^ ^
