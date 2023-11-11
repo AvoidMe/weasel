@@ -60,6 +60,12 @@ class ConstCounter(ast.NodeVisitor):
     def visit_If(self, node):
         self.double_visit(node)
 
+    def visit_Match(self, node):
+        self.count.append(self.count[-1] + 1)
+        for child in node.cases:
+            self.visit(child)
+        self.count.pop()
+
     def visit_FunctionDef(self, node):
         self.inner_visit(node)
 

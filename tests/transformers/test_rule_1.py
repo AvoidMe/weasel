@@ -267,6 +267,26 @@ from weasel.transformers.rule_1 import Rule_1
             """
             ),
         ),
+        (
+            textwrap.dedent(
+                """
+            x = 5
+            match something:
+                case "a":
+                    x = 10
+            print(x)
+            """
+            ),
+            textwrap.dedent(
+                """
+            x = 5
+            match something:
+                case "a":
+                    x = 10
+            print(x)
+            """
+            ),
+        ),
     ],
     ids=[
         "Constant without usage should be removed",
@@ -288,6 +308,7 @@ from weasel.transformers.rule_1 import Rule_1
         "We shouldn't leave functions body empty",
         "We should ignore constants which are involved in global statement",
         "We should ignore constants which are involved in nonlocal statement",
+        "Constants inside match statements should be ignored",
     ],
 )
 def test_constant_folding_rule(input, expected):
