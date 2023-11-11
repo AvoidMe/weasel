@@ -1,10 +1,8 @@
-import dis
-
-
 def main():
-    x = 5
+    x = " abcd ".strip()
     print(x)
 
 
+import dis
+
 dis.dis(main)
-main()

@@ -1,59 +1,13 @@
 """
     This rule is replacing constant variables with their values
     For example:
-        x = 10
-        print(x + 100)
+        x = 10; print(x + 100)
     Transformed into:
         print(10 + 100)
 """
 import ast
 
-# TODO: add testcases
-
-
-class NodeCounter:
-    def __init__(self, node, value):
-        self.node = node
-        self.value = value
-        self.count = 1
-
-
-class Rule_1_visitor(ast.NodeVisitor):
-    def __init__(self):
-        super().__init__()
-        self._statistic = {}
-        self.inside_function = False
-
-    def visit_FunctionDef(self, node):
-        self.inside_function = True
-        for child in node.body:
-            self.visit(child)
-        self.inside_function = False
-
-    def visit_AsyncFunctionDef(self, node):
-        self.inside_function = True
-        for child in node.body:
-            self.visit(child)
-        self.inside_function = False
-
-    def visit_ClassDef(self, node):
-        self.inside_function = True
-        for child in node.body:
-            self.visit(child)
-        self.inside_function = False
-
-    def visit_Assign(self, node):
-        if self.inside_function:
-            return
-        # TODO: we want to optimize such cases also
-        if len(node.targets) > 1 or not isinstance(node.targets[0], ast.Name):
-            return
-        target_name = node.targets[0].id
-        if isinstance(node.value, ast.Constant):
-            counter = self._statistic.get(
-                target_name, NodeCounter(node, node.value)
-            )
-            counter.count += 1
+from weasel.const_counter import ConstCounter
 
 
 class Rule_1(ast.NodeTransformer):
@@ -63,11 +17,10 @@ class Rule_1(ast.NodeTransformer):
         self._statistic = statistic
 
     def visit_FunctionDef(self, node):
-        print(node)
         if node != self._root:
-            locals = Rule_1_visitor()
-            for node in node.body:
-                locals.visit(node)
+            locals = ConstCounter()
+            for child in node.body:
+                locals.visit(child)
             return Rule_1(self._statistic + [locals], root=node).visit(node)
         new_body = []
         for child in node.body:
@@ -75,6 +28,9 @@ class Rule_1(ast.NodeTransformer):
             if new_child is None:
                 continue
             new_body.append(ast.copy_location(new_child, child))
+        # If we leave function body empty it's runtime error
+        if len(new_body) == 0:
+            new_body.append(ast.copy_location(ast.Pass(), node.body[0]))
         return ast.copy_location(
             ast.FunctionDef(
                 name=node.name,
@@ -87,7 +43,6 @@ class Rule_1(ast.NodeTransformer):
         )
 
     def visit_Name(self, node):
-        print(node)
         # Note: order is important
         for lookup in self._statistic[::-1]:
             if node.id in lookup._statistic:
