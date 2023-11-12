@@ -287,6 +287,69 @@ from weasel.transformers.rule_1 import Rule_1
             """
             ),
         ),
+        (
+            textwrap.dedent(
+                """
+            x = 5
+            class Something:
+                def foo(self):
+                    x = 10
+            print(x)
+            """
+            ),
+            textwrap.dedent(
+                """
+            class Something:
+                def foo(self):
+                    pass
+            print(5)
+            """
+            ),
+        ),
+        (
+            textwrap.dedent(
+                """
+            x = 5
+            class Something:
+                def foo(self):
+                    global x
+                    x = 10
+            print(x)
+            """
+            ),
+            textwrap.dedent(
+                """
+            x = 5
+            class Something:
+                def foo(self):
+                    global x
+                    x = 10
+            print(x)
+            """
+            ),
+        ),
+        (
+            textwrap.dedent(
+                """
+            class Something:
+                def __init__(self):
+                    self.x = 5
+
+                def foo(self):
+                    print(self.x)
+            """
+            ),
+            textwrap.dedent(
+                """
+            class Something:
+                def __init__(self):
+                    self.x = 5
+
+                def foo(self):
+                    print(self.x)
+            """
+            ),
+        ),
     ],
     ids=[
         "Constant without usage should be removed",
@@ -309,6 +372,9 @@ from weasel.transformers.rule_1 import Rule_1
         "We should ignore constants which are involved in global statement",
         "We should ignore constants which are involved in nonlocal statement",
         "Constants inside match statements should be ignored",
+        "Class with same constant name",
+        "Class with global statement for same constant name",
+        "Class with local constant shouldn't be touched",
     ],
 )
 def test_constant_folding_rule(input, expected):
