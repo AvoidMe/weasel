@@ -8,9 +8,19 @@ type TokenType int
 const (
 	Word TokenType = iota + 1
 	String
-	OpenBracket  // (
-	CloseBracket // )
-	Comma        // ,
+	Integer
+	Comma // ,
+
+	Plus  // +
+	Minus // -
+	Mult  // *
+	Div   // /
+
+	OpenBracket        // (
+	CloseBracket       // )
+	FigureOpenBracket  // {
+	FigureCloseBracket // }
+	EOF
 )
 
 type Token struct {

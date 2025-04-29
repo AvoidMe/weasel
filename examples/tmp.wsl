@@ -1,0 +1,20 @@
+// TODO: write tests for lexer & parser
+
+print("test")
+print("test", "but with additional argument")
+print(42, "number and string")
+
+print("nothing here") // <-- Comments should also work?
+// empty line lmao
+
+fun first_function() {
+	print("hello from function")
+	print("hello from function")
+}
+
+first_function()
+
+print(10 + 12)
+print(10 - 12)
+print(10 * 12)
+print(12 / 6)

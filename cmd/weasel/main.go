@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	source, err := os.ReadFile("examples/hello_world.wsl")
+	source, err := os.ReadFile("examples/tmp.wsl")
 	if err != nil {
 		panic(err)
 	}

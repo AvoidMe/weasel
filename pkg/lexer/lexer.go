@@ -43,7 +43,7 @@ func (self *Lexer) GetToken() (*token.Token, error) {
 		symbol, _, err := self.Body.ReadRune()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, nil
+				return &token.Token{Type: token.EOF}, nil
 			}
 			return nil, fmt.Errorf("read error: %w", err)
 		}
@@ -67,6 +67,46 @@ func (self *Lexer) GetToken() (*token.Token, error) {
 				return nil, fmt.Errorf("internal error: %w", err)
 			}
 			return self.ReadString()
+		case symbol == '+':
+			return &token.Token{
+				Type: token.Plus,
+			}, nil
+		case symbol == '-':
+			return &token.Token{
+				Type: token.Minus,
+			}, nil
+		case symbol == '*':
+			return &token.Token{
+				Type: token.Mult,
+			}, nil
+		case symbol == '/':
+			peek, err := self.Body.Peek(1)
+			if err != nil {
+				return nil, fmt.Errorf("internal error: %w", err)
+			}
+			if peek[0] != '/' {
+				return &token.Token{
+					Type: token.Div,
+				}, nil
+			}
+			err = self.DiscardLine()
+			if err != nil {
+				return nil, fmt.Errorf("internal error: %w", err)
+			}
+		case symbol == '{':
+			return &token.Token{
+				Type: token.FigureOpenBracket,
+			}, nil
+		case symbol == '}':
+			return &token.Token{
+				Type: token.FigureCloseBracket,
+			}, nil
+		case unicode.IsDigit(symbol):
+			err := self.Body.UnreadRune()
+			if err != nil {
+				return nil, fmt.Errorf("internal error: %w", err)
+			}
+			return self.ReadNumber()
 		case unicode.IsSpace(symbol):
 			continue
 		case unicode.IsLetter(symbol):
@@ -95,7 +135,7 @@ func (self *Lexer) ReadWord() (*token.Token, error) {
 			return nil, fmt.Errorf("read error: %w", err)
 		}
 		switch {
-		case unicode.IsLetter(symbol):
+		case unicode.IsLetter(symbol), symbol == '_':
 			word = append(word, symbol)
 		case unicode.IsDigit(symbol):
 			if len(word) == 0 {
@@ -137,4 +177,71 @@ func (self *Lexer) ReadString() (*token.Token, error) {
 			word = append(word, symbol)
 		}
 	}
+}
+
+func (self *Lexer) ReadNumber() (*token.Token, error) {
+	var number []rune
+	for {
+		symbol, _, err := self.Body.ReadRune()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return &token.Token{
+					Type:    token.Integer,
+					Content: number,
+				}, nil
+			}
+			return nil, fmt.Errorf("read error: %w", err)
+		}
+		switch {
+		case unicode.IsNumber(symbol):
+			number = append(number, symbol)
+		default:
+			err := self.Body.UnreadRune()
+			if err != nil {
+				return nil, fmt.Errorf("unread error: %w", err)
+			}
+			return &token.Token{
+				Type:    token.Integer,
+				Content: number,
+			}, nil
+		}
+	}
+}
+
+func (self *Lexer) DiscardLine() error {
+	for {
+		symbol, _, err := self.Body.ReadRune()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return fmt.Errorf("read error: %w", err)
+		}
+		switch symbol {
+		case '\n':
+			return nil
+		}
+	}
+}
+
+func (self *Lexer) ExpectType(expect token.Token) error {
+	tok, err := self.GetToken()
+	if err != nil {
+		return err
+	}
+	if tok.Type != expect.Type {
+		return fmt.Errorf("unexpected token: %s, want: %s", tok, expect)
+	}
+	return nil
+}
+
+func (self *Lexer) ExpectContent(expect token.Token) error {
+	tok, err := self.GetToken()
+	if err != nil {
+		return err
+	}
+	if tok.Type != expect.Type || string(tok.Content) != string(expect.Content) {
+		return fmt.Errorf("unexpected token: %s, want: %s", tok, expect)
+	}
+	return nil
 }

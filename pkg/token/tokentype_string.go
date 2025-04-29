@@ -10,14 +10,22 @@ func _() {
 	var x [1]struct{}
 	_ = x[Word-1]
 	_ = x[String-2]
-	_ = x[OpenBracket-3]
-	_ = x[CloseBracket-4]
-	_ = x[Comma-5]
+	_ = x[Integer-3]
+	_ = x[Comma-4]
+	_ = x[Plus-5]
+	_ = x[Minus-6]
+	_ = x[Mult-7]
+	_ = x[Div-8]
+	_ = x[OpenBracket-9]
+	_ = x[CloseBracket-10]
+	_ = x[FigureOpenBracket-11]
+	_ = x[FigureCloseBracket-12]
+	_ = x[EOF-13]
 }
 
-const _TokenType_name = "WordStringOpenBracketCloseBracketComma"
+const _TokenType_name = "WordStringIntegerCommaPlusMinusMultDivOpenBracketCloseBracketFigureOpenBracketFigureCloseBracketEOF"
 
-var _TokenType_index = [...]uint8{0, 4, 10, 21, 33, 38}
+var _TokenType_index = [...]uint8{0, 4, 10, 17, 22, 26, 31, 35, 38, 49, 61, 78, 96, 99}
 
 func (i TokenType) String() string {
 	i -= 1
